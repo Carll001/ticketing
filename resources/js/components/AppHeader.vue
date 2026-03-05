@@ -37,6 +37,8 @@ import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import user from '@/routes/user';
+import department from '@/routes/department';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -57,6 +59,16 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Manage User',
+        href: user.index(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Manage Department',
+        href: department.index(),
         icon: LayoutGrid,
     },
 ];

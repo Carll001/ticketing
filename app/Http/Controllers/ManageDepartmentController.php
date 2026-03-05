@@ -2,64 +2,60 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ManageDepartment;
-use Illuminate\Http\Request;
+use App\Http\Requests\DepartmentRequest;
+use App\Http\Resources\DepartmentResource;
+use App\Models\Department;
+use App\Services\ManageDepartmentService;
+use Inertia\Inertia;
 
 class ManageDepartmentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected ManageDepartmentService $service;
+
+    public function __construct(ManageDepartmentService $service)
+    {
+        $this->service = $service;
+    }
+
     public function index()
     {
-        //
+        $departments = Department::latest()->get();
+
+        return Inertia::render('manage-department/Index', [
+            'departments' => DepartmentResource::collection($departments),
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return Inertia::render('manage-department/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(DepartmentRequest $request)
     {
-        //
+        $this->service->store($request->validated());
+
+        return redirect()->route('department.index');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(ManageDepartment $manageDepartment)
+    public function edit(Department $department)
     {
-        //
+        return Inertia::render('manage-department/Edit', [
+            'department' => DepartmentResource::make($department),
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(ManageDepartment $manageDepartment)
+    public function update(DepartmentRequest $request, Department $department)
     {
-        //
+        $this->service->update($department, $request->validated());
+
+        return redirect()->route('department.index');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, ManageDepartment $manageDepartment)
+    public function destroy(Department $department)
     {
-        //
-    }
+        $this->service->destroy($department);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(ManageDepartment $manageDepartment)
-    {
-        //
+        return redirect()->route('department.index');
     }
 }

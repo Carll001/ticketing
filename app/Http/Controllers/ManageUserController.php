@@ -2,64 +2,64 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ManageUser;
-use Illuminate\Http\Request;
+use App\Http\Requests\UserRequest;
+use App\Http\Resources\DepartmentResource;
+use App\Http\Resources\UserResource;
+use App\Models\Department;
+use App\Models\User;
+use App\Services\ManageUserService;
+use Inertia\Inertia;
 
 class ManageUserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected ManageUserService $service;
+
+    public function __construct(ManageUserService $service)
+    {
+        $this->service = $service;
+    }
+
     public function index()
     {
-        //
+        return Inertia::render('manage-user/Index', [
+            'users' => UserResource::collection(User::with('departments')->get()),
+            'departments' => DepartmentResource::collection(Department::all())
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return Inertia::render('manage-user/Create', [
+            'departments' => DepartmentResource::collection(Department::all())
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(UserRequest $request)
     {
-        //
+        $this->service->store($request->validated());
+
+        return redirect()->route('user.index');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(ManageUser $manageUser)
+    public function edit(User $user)
     {
-        //
+        return Inertia::render('manage-user/Edit', [
+            'user' => UserResource::make($user->load('departments', 'permissions')),
+            'departments' => DepartmentResource::collection(Department::all())
+        ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(ManageUser $manageUser)
+    public function update(UserRequest $request, User $user)
     {
-        //
+        $this->service->update($user, $request->validated());
+
+        return redirect()->route('user.index');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, ManageUser $manageUser)
+    public function destroy(User $user)
     {
-        //
-    }
+        $this->service->destroy($user);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(ManageUser $manageUser)
-    {
-        //
+        return redirect()->route('user.index');
     }
 }
