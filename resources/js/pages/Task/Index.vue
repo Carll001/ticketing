@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import Button from '@/components/ui/button/Button.vue';
-import { Input } from '@/components/ui/input';
 import { Head, Link } from '@inertiajs/vue3';
 import { Search } from 'lucide-vue-next';
+import Button from '@/components/ui/button/Button.vue';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';    
 
 type Task = {

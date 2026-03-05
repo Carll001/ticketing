@@ -1,4 +1,8 @@
 <script setup lang='ts'>
+import { useForm } from '@inertiajs/vue3';
+import type { DateValue } from '@internationalized/date';
+import { ChevronDownIcon } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -28,10 +32,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import task from '@/routes/task';
-import { useForm } from '@inertiajs/vue3';
-import type { DateValue } from '@internationalized/date';
-import { ChevronDownIcon } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
 import Separator from '../ui/separator/Separator.vue';
 
 type Department = {

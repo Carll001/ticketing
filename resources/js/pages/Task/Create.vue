@@ -1,7 +1,7 @@
 <script setup lang='ts'>
+import { Head } from '@inertiajs/vue3';
 import TaskCreateForm from '@/components/TaskComponents/TaskCreateForm.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
 
 type Department = {
     id: string;
