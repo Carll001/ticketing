@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from '@/components/ui/button/Button.vue';
 import { Input } from '@/components/ui/input';
+import { Link } from '@inertiajs/vue3';
 import { Search } from 'lucide-vue-next';
 
 
@@ -18,7 +19,9 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     <Input class="pl-10" placeholder="Search..." />
                 </div>
                 <div>
-                    <Button>Create</Button>
+                    <Link href="/task/create">
+                        <Button>Create</Button>
+                    </Link>
                 </div>
             </div>
 
