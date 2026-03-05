@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import AppLayout from '@/layouts/AppLayout.vue';
 import user from '@/routes/user';
-import { User } from '@/types';
+import { BreadcrumbItem, User } from '@/types';
 import { Department } from '@/types/department';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { Check, ChevronsUpDown } from 'lucide-vue-next';
@@ -20,6 +20,17 @@ const props = defineProps<{
     user: { data: User & { departments: Department[], permissions: { name: string }[] } }
     departments: { data: Department[] }
 }>()
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Users',
+        href: user.index(),
+    },
+    {
+        title: 'Edit user',
+        href: user.edit(props.user.data.id),
+    },
+];
 
 const page = usePage()
 const auth = computed(() => page.props.auth as { user: { role: string } })
@@ -79,7 +90,7 @@ const isPermissionChecked = (permissionName: string) => {
 <template>
 
     <Head title="Edit User" />
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <form class="flex flex-col flex-1 gap-4 p-4" @submit.prevent="updateUser">
 
             <section class="flex justify-end">

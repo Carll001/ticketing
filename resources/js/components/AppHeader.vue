@@ -39,6 +39,7 @@ import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import user from '@/routes/user';
 import department from '@/routes/department';
+import task from '@/routes/task';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -69,6 +70,11 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Manage Department',
         href: department.index(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Task',
+        href: task.index(),
         icon: LayoutGrid,
     },
 ];
@@ -103,7 +109,7 @@ const rightNavItems: NavItem[] = [
                                 <Menu class="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
-                        <SheetContent side="left" class="w-[300px] p-6">
+                        <SheetContent side="left" class="w-75 p-6">
                             <SheetTitle class="sr-only"
                                 >Navigation menu</SheetTitle
                             >
@@ -282,7 +288,6 @@ const rightNavItems: NavItem[] = [
         </div>
 
         <div
-            v-if="props.breadcrumbs.length > 1"
             class="flex w-full border-b border-sidebar-border/70"
         >
             <div

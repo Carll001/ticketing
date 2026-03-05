@@ -16,10 +16,22 @@ import { Check, ChevronsUpDown } from 'lucide-vue-next';
 import { computed, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'vue-sonner'
+import { BreadcrumbItem } from '@/types';
 
 const props = defineProps<{
     departments: { data: Department[] }
 }>()
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Users',
+        href: user.index(),
+    },
+    {
+        title: 'Create user',
+        href: user.create(),
+    },
+];
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
@@ -73,7 +85,7 @@ const createUser = () => {
 
 <template>
     <Head title="Create User" />
-    <AppLayout>
+    <AppLayout :breadcrumbs="breadcrumbs">
         <form class="flex flex-col flex-1 gap-4 p-4" @submit.prevent="createUser">
 
             <section class="flex justify-end">
