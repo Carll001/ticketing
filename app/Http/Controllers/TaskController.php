@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\TaskRequest;
+use App\Http\Resources\TaskResource;
 use App\Http\Services\TaskService;
-use App\Models\Department;
 use App\Models\Task;
+use App\Repositories\TaskRepository;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
@@ -15,26 +16,22 @@ class TaskController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(TaskRepository $taskRepository): Response
     {
         return Inertia::render('Task/Index', [
-            'tasks' => Task::query()
-                ->latest()
-                ->with(['departmentAssigned:id,name', 'creator:id,name'])
-                ->get(),
+            'tasks' => TaskResource::collection($taskRepository->getForIndex())->resolve(),
         ]);
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(TaskRepository $taskRepository): Response
     {
         return Inertia::render('Task/Create', [
-            'departments' => Department::query()
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get(),
+            'departments' => $taskRepository->getDepartmentOptions(),
+            'users' => $taskRepository->getUserOptions(),
+            'presets' => $taskRepository->getTaskPresetOptions(),
         ]);
     }
 
@@ -43,7 +40,7 @@ class TaskController extends Controller
      */
     public function store(TaskRequest $request, TaskService $taskService): RedirectResponse
     {
-        $task = $taskService->create($request->validated(), $request->user());
+        $task = $taskService->post($request->validated(), $request->user());
 
         return redirect()
             ->route('task.show', $task)
@@ -53,26 +50,27 @@ class TaskController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Task $task): Response
+    public function show(Task $task, TaskRepository $taskRepository): Response
     {
-        $task->load(['departmentAssigned:id,name', 'creator:id,name']);
+        $loadedTask = $taskRepository->getByIdForShow($task->id);
 
         return Inertia::render('Task/Show', [
-            'task' => $task,
+            'task' => (new TaskResource($loadedTask))->resolve(),
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Task $task): Response
+    public function edit(Task $task, TaskRepository $taskRepository): Response
     {
+        $loadedTask = $taskRepository->getByIdForShow($task->id);
+
         return Inertia::render('Task/Edit', [
-            'task' => $task,
-            'departments' => Department::query()
-                ->select('id', 'name')
-                ->orderBy('name')
-                ->get(),
+            'task' => (new TaskResource($loadedTask))->resolve(),
+            'departments' => $taskRepository->getDepartmentOptions(),
+            'users' => $taskRepository->getUserOptions(),
+            'presets' => $taskRepository->getTaskPresetOptions(),
         ]);
     }
 
@@ -81,10 +79,10 @@ class TaskController extends Controller
      */
     public function update(TaskRequest $request, Task $task, TaskService $taskService): RedirectResponse
     {
-        $taskService->update($task, $request->validated());
+        $updatedTask = $taskService->update($task, $request->validated());
 
         return redirect()
-            ->route('task.show', $task)
+            ->route('task.show', $updatedTask)
             ->with('success', 'Task updated successfully.');
     }
 

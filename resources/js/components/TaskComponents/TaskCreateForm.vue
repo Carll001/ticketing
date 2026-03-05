@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { router } from '@inertiajs/vue3';
+import { store as taskStore } from '@/routes/task';
 
 import Heading from '@/components/Heading.vue';
 
@@ -70,12 +72,72 @@ import {
  *  UI toggles
  *  ------------------------- */
 const showStepForm = ref(false);
+const currentStepIndex = ref<number | null>(null);
+
+function loadStepToEditor(index: number) {
+  const step = taskSteps.value[index];
+  if (!step) return;
+
+  currentStepIndex.value = index;
+  stepTitle.value = step.step_details.title;
+  stepDescription.value = step.step_details.description ?? '';
+  hasCost.value = step.additional_details.has_cost;
+  costAmount.value = step.additional_details.cost_amount ?? '';
+  stepFields.value = step.fields.map((field) => ({
+    id: uid(),
+    type: field.type,
+    label: field.label,
+  }));
+  showStepForm.value = true;
+}
 
 function openStepForm() {
-  showStepForm.value = true;
+  const title = taskTitle.value.trim();
+  const order = stepOrder.value;
+
+  if (!title || !order) {
+    if (!title) {
+      errors.value.title = 'Task title is required before adding a step.';
+    }
+
+    if (!order) {
+      errors.value.step_order = 'Step order is required before adding a step.';
+    }
+
+    return;
+  }
+
+  // clear field-level blockers once valid
+  delete errors.value.title;
+  delete errors.value.step_order;
+
+  const nextIndex = taskSteps.value.length;
+  const defaultTitle = `Step ${nextIndex + 1}`;
+
+  taskSteps.value.push({
+    local_id: uid(),
+    step_details: {
+      title: defaultTitle,
+      description: null,
+      position: nextIndex,
+      status: 'pending',
+    },
+    additional_details: {
+      has_cost: false,
+      cost_amount: null,
+    },
+    fields: [],
+  });
+
+  // Keep the currently visible Step Details panel unchanged.
+  // Only switch editor focus on the very first step creation.
+  if (!showStepForm.value || currentStepIndex.value === null) {
+    loadStepToEditor(nextIndex);
+  }
 }
 function closeStepForm() {
   showStepForm.value = false;
+  currentStepIndex.value = null;
 }
 
 /** -------------------------
@@ -85,13 +147,9 @@ type Department = { id: string; name: string };
 type User = { id: string; name: string; departmentId?: string };
 type Preset = { id: string; name: string; type: 'preset' | 'custom' };
 
-const departments = ref<Department[]>([
-  { id: 'dep_any', name: 'Anyone' },
-  { id: 'dep_hr', name: 'HR' },
-  { id: 'dep_fin', name: 'Finance' },
-  { id: 'dep_it', name: 'IT' },
-  { id: 'dep_ops', name: 'Operations' },
-]);
+const props = defineProps<{
+  departments: Department[];
+}>();
 
 const users = ref<User[]>([
   { id: 'u_any', name: 'Anyone' },
@@ -122,17 +180,21 @@ const selectedPresetId = ref<string>('');
 
 /** assign department */
 const deptOpen = ref(false);
-const selectedDepartmentId = ref<string>('dep_any');
+const selectedDepartmentId = ref<string>('');
 const departmentQuery = ref('');
+const processing = ref(false);
+const errors = ref<Record<string, string>>({});
+
+const allDepartments = computed(() => [{ id: '', name: 'Anyone' }, ...props.departments]);
 
 const selectedDepartment = computed(() => {
-  return departments.value.find((d) => d.id === selectedDepartmentId.value) ?? null;
+  return allDepartments.value.find((d) => d.id === selectedDepartmentId.value) ?? null;
 });
 
 const filteredDepartments = computed(() => {
   const q = departmentQuery.value.trim().toLowerCase();
-  if (!q) return departments.value;
-  return departments.value.filter((d) => d.name.toLowerCase().includes(q));
+  if (!q) return allDepartments.value;
+  return allDepartments.value.filter((d) => d.name.toLowerCase().includes(q));
 });
 
 function selectDepartment(id: string) {
@@ -175,8 +237,28 @@ const costAmount = ref<number | ''>('');
 
 type FieldType = 'Textarea' | 'Checkbox' | 'SmallInput';
 type StepField = { id: string; type: FieldType; label: string };
+type TaskStepPayload = {
+  local_id: string;
+  step_details: {
+    title: string;
+    description: string | null;
+    position: number;
+    status: 'pending';
+  };
+  additional_details: {
+    has_cost: boolean;
+    cost_amount: number | null;
+  };
+  fields: Array<{
+    label: string;
+    type: FieldType;
+    required: boolean;
+    position: number;
+  }>;
+};
 
 const stepFields = ref<StepField[]>([]);
+const taskSteps = ref<TaskStepPayload[]>([]);
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -199,6 +281,38 @@ function removeField(id: string) {
   stepFields.value = stepFields.value.filter((f) => f.id !== id);
 }
 
+function removeStep(index: number) {
+  taskSteps.value = taskSteps.value
+    .filter((_, i) => i !== index)
+    .map((step, i) => ({
+      ...step,
+      step_details: {
+        ...step.step_details,
+        title: `Step ${i + 1}`,
+        position: i,
+      },
+    }));
+
+  if (currentStepIndex.value === null) return;
+  if (currentStepIndex.value === index) {
+    if (taskSteps.value.length === 0) {
+      closeStepForm();
+      return;
+    }
+    const fallbackIndex = Math.max(0, index - 1);
+    loadStepToEditor(fallbackIndex);
+    return;
+  }
+  if (currentStepIndex.value > index) {
+    currentStepIndex.value -= 1;
+  }
+
+  const currentStep = taskSteps.value[currentStepIndex.value];
+  if (currentStep) {
+    stepTitle.value = currentStep.step_details.title;
+  }
+}
+
 /** -------------------------
  *  Actions (dummy submit)
  *  ------------------------- */
@@ -211,52 +325,94 @@ function discardTask() {
   taskType.value = 'preset';
   selectedPresetId.value = '';
 
-  selectedDepartmentId.value = 'dep_any';
+  selectedDepartmentId.value = '';
   departmentQuery.value = '';
 
   selectedUserId.value = 'u_any';
   userQuery.value = '';
 
   addAnother.value = false;
+  taskSteps.value = [];
+  stepTitle.value = '';
+  stepDescription.value = '';
+  stepFields.value = [];
+  hasCost.value = false;
+  costAmount.value = '';
+  closeStepForm();
+  errors.value = {};
+}
+
+function formatDueDate(value: unknown): string | null {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof (value as { toDate?: (tz?: string) => Date }).toDate === 'function') {
+    return (value as { toDate: (tz?: string) => Date }).toDate('UTC').toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
 }
 
 function onTaskSubmit() {
-  console.log('TASK SUBMIT', {
-    taskTitle: taskTitle.value,
-    taskDescription: taskDescription.value,
-    dueDate: dueDate.value,
-    stepOrder: stepOrder.value,
+  errors.value = {};
 
-    taskType: taskType.value,
-    selectedPresetId: selectedPresetId.value,
-
-    department: selectedDepartment.value,
-    assignedUser: assignedUser.value,
-    addAnother: addAnother.value,
+  router.post(taskStore().url, {
+    title: taskTitle.value.trim(),
+    description: taskDescription.value.trim() || null,
+    due_date: formatDueDate(dueDate.value),
+    step_order: stepOrder.value,
+    task_type: taskType.value,
+    department_assigned_id: selectedDepartmentId.value || null,
+    assigned_to_user_id: isUuid(selectedUserId.value) ? selectedUserId.value : null,
+    task_preset_id:
+      taskType.value === 'preset' && isUuid(selectedPresetId.value) ? selectedPresetId.value : null,
+    steps: taskSteps.value,
+  }, {
+    preserveScroll: true,
+    onStart: () => {
+      processing.value = true;
+    },
+    onError: (formErrors) => {
+      errors.value = formErrors as Record<string, string>;
+    },
+    onFinish: () => {
+      processing.value = false;
+    },
   });
 }
 
-function onStepSubmit() {
-  console.log('STEP SUBMIT', {
-    stepTitle: stepTitle.value,
-    stepDescription: stepDescription.value,
-    stepFields: stepFields.value,
-    hasCost: hasCost.value,
-    costAmount: costAmount.value,
-  });
+watch(
+  [stepTitle, stepDescription, hasCost, costAmount, stepFields, currentStepIndex],
+  () => {
+    if (currentStepIndex.value === null) return;
 
-  if (addAnother.value) {
-    // keep open, reset step only
-    stepTitle.value = '';
-    stepDescription.value = '';
-    stepFields.value = [];
-    hasCost.value = false;
-    costAmount.value = '';
-    return;
-  }
+    const step = taskSteps.value[currentStepIndex.value];
+    if (!step) return;
 
-  closeStepForm();
-}
+    const title = stepTitle.value.trim() || `Step ${currentStepIndex.value + 1}`;
+    step.step_details.title = title;
+    step.step_details.description = stepDescription.value.trim() || null;
+    step.additional_details.has_cost = hasCost.value;
+    step.additional_details.cost_amount =
+      hasCost.value && costAmount.value !== '' ? Number(costAmount.value) : null;
+    step.fields = stepFields.value.map((field, index) => ({
+      label: field.label.trim() || `Field ${index + 1}`,
+      type: field.type,
+      required: false,
+      position: index,
+    }));
+  },
+  { deep: true },
+);
 
 const dueDateLabel = computed(() => {
   if (!dueDate.value) return 'Pick a date';
@@ -284,7 +440,9 @@ const dueDateLabel = computed(() => {
           <Button size="sm" type="button" variant="destructive" @click="discardTask">
             Discard
           </Button>
-          <Button size="sm" type="submit">Create</Button>
+          <Button size="sm" type="submit" :disabled="processing">
+            {{ processing ? 'Creating...' : 'Create' }}
+          </Button>
         </div>
       </section>
 
@@ -305,7 +463,7 @@ const dueDateLabel = computed(() => {
                   </Label>
 
                   <Input id="task-title" v-model="taskTitle" placeholder="task title" />
-                  <InputError />
+                  <InputError :message="errors.title" />
                 </div>
 
                 <div class="flex flex-col gap-3">
@@ -343,7 +501,7 @@ const dueDateLabel = computed(() => {
                   v-model="taskDescription"
                   placeholder="task description"
                 />
-                <InputError />
+                <InputError :message="errors.description" />
               </section>
             </div>
           </CardContent>
@@ -376,6 +534,7 @@ const dueDateLabel = computed(() => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
+              <InputError :message="errors.step_order" />
             </div>
 
             <Separator class="my-2" />
@@ -422,6 +581,7 @@ const dueDateLabel = computed(() => {
               <p class="text-[10px] text-zinc-500 italic">
                 Selecting a preset will populate the input fields automatically.
               </p>
+              <InputError :message="errors.task_preset_id" />
             </div>
 
             <Separator class="my-2" />
@@ -464,6 +624,7 @@ const dueDateLabel = computed(() => {
                   </Command>
                 </PopoverContent>
               </Popover>
+              <InputError :message="errors.department_assigned_id" />
             </div>
 
             <!-- assign user -->
@@ -533,9 +694,68 @@ const dueDateLabel = computed(() => {
         </Button>
       </div>
 
+      <div v-if="taskSteps.length === 0" class="rounded-lg border border-dashed p-4 text-sm text-zinc-500">
+        No steps added yet.
+      </div>
+
+      <div v-else class="space-y-4">
+        <div
+          v-for="(step, index) in taskSteps"
+          :key="step.local_id"
+          class="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted/20"
+          @click="loadStepToEditor(index)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-medium">{{ step.step_details.title }}</p>
+              <p class="mt-1 text-sm text-zinc-500">
+                {{ step.step_details.description || 'No description' }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="icon" @click.stop="removeStep(index)">
+                <X class="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div class="mt-3 grid gap-2 text-sm md:grid-cols-2">
+            <div>
+              <p class="text-zinc-500">Has cost</p>
+              <p class="font-medium">{{ step.additional_details.has_cost ? 'Yes' : 'No' }}</p>
+            </div>
+            <div>
+              <p class="text-zinc-500">Cost amount</p>
+              <p class="font-medium">{{ step.additional_details.cost_amount ?? '-' }}</p>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <p class="text-sm font-medium">User Input Fields</p>
+            <div v-if="step.fields.length === 0" class="mt-1 text-sm text-zinc-500">
+              No input fields added.
+            </div>
+            <div v-else class="mt-2 space-y-2">
+              <div
+                v-for="(field, fieldIndex) in step.fields"
+                :key="`${step.local_id}-${fieldIndex}`"
+                class="rounded border p-2 text-sm"
+              >
+                <p class="font-medium">{{ field.label }}</p>
+                <p class="text-xs text-zinc-500">Type: {{ field.type }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- STEP FORM -->
       <div v-if="showStepForm" class="space-y-2">
-        <form class="space-y-2" @submit.prevent="onStepSubmit">
+        <form class="space-y-2">
+          <p v-if="currentStepIndex !== null" class="text-sm text-zinc-500">
+            Editing Step {{ currentStepIndex + 1 }}
+          </p>
           <section class="grid grid-cols-[2fr_1fr] gap-4">
             <!-- LEFT: Step details -->
             <Card>
@@ -710,6 +930,10 @@ const dueDateLabel = computed(() => {
               </CardContent>
             </Card>
           </section>
+
+          <div class="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" @click="closeStepForm">Cancel</Button>
+          </div>
         </form>
       </div>
     </section>

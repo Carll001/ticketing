@@ -7,9 +7,19 @@ type Department = {
     id: string;
     name: string;
 };
+type UserOption = {
+    id: string;
+    name: string;
+};
+type PresetOption = {
+    id: string;
+    name: string;
+};
 
 const props = defineProps<{
     departments: Department[];
+    users: UserOption[];
+    presets: PresetOption[];
 }>();
 </script>
 
@@ -18,7 +28,11 @@ const props = defineProps<{
 
     <AppLayout>
         <div class='flex flex-1 flex-col gap-4 p-4'>
-            <TaskCreateForm :departments='props.departments' />
+            <TaskCreateForm
+                :departments='props.departments'
+                :users='props.users'
+                :presets='props.presets'
+            />
         </div>
     </AppLayout>
 </template>

@@ -1,11 +1,34 @@
 <script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3';
 import Button from '@/components/ui/button/Button.vue';
 import { Input } from '@/components/ui/input';  
 import { Search } from 'lucide-vue-next';
-
-
 import AppLayout from '@/layouts/AppLayout.vue';    
+import TaskCard from '@/components/TaskComponents/TaskCard.vue';
 
+type RelatedUser = {
+    id: string | number;
+    name: string;
+};
+
+type RelatedDepartment = {
+    id: string | number;
+    name: string;
+};
+
+type Task = {
+    id: string | number;
+    title: string;
+    description: string | null;
+    status: string;
+    due_date: string | null;
+    creator?: RelatedUser | null;
+    department_assigned?: RelatedDepartment | null;
+};
+
+const props = defineProps<{
+    tasks: Task[];
+}>();
 </script>
 <template>
 
@@ -18,12 +41,14 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     <Input class="pl-10" placeholder="Search..." />
                 </div>
                 <div>
-                    <Button>Create</Button>
+                    <Button as-child>
+                        <Link href="/task/create">Create</Link>
+                    </Button>
                 </div>
             </div>
 
             <div class="flex flex-col gap-4">
-                <TaskCard />
+                <TaskCard :tasks="props.tasks" />
             </div>
             <!-- pagination -->
             <div class="border-t px-6 py-4">

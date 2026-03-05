@@ -3,8 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Task extends Model
 {
@@ -20,6 +21,7 @@ class Task extends Model
         'step_order',
         'task_preset_id',
         'department_assigned_id',
+        'assigned_to_user_id',
         'creator_id',
     ];
 
@@ -28,6 +30,7 @@ class Task extends Model
      */
     protected $casts = [
         'due_date' => 'date',
+        'cost_total' => 'decimal:2',
     ];
 
     public function creator(): BelongsTo
@@ -38,5 +41,20 @@ class Task extends Model
     public function departmentAssigned(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_assigned_id');
+    }
+
+    public function taskPreset(): BelongsTo
+    {
+        return $this->belongsTo(TaskPreset::class, 'task_preset_id');
+    }
+
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to_user_id');
+    }
+
+    public function steps(): HasMany
+    {
+        return $this->hasMany(TaskStep::class);
     }
 }
