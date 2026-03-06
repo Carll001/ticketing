@@ -8,10 +8,12 @@ import { Plus } from 'lucide-vue-next'
 import TaskInfoCard from '@/components/task-components/builder/TaskInfoCard.vue'
 import StepsBuilder from '@/components/task-components/builder/StepsBuilder.vue'
 import FieldDialog from '@/components/task-components/builder/FieldDialog.vue'
-import task from '@/routes/task'
+import taskRoute from '@/routes/task'
 
 import type { Department } from '@/types/department'
 import { StepField, StepOrder, TaskStep } from '@/types/task-builder'
+import { toast } from 'vue-sonner'
+import { BreadcrumbItem } from '@/types'
 
 type NewFieldInput = Omit<StepField, 'id'>
 type TaskPresetFieldOption = {
@@ -38,37 +40,104 @@ type TaskPresetOption = {
   department_id?: string | null
   steps?: TaskPresetStepOption[]
 }
+type TaskEditPayload = {
+  id: string
+  title: string
+  description?: string | null
+  task_preset_id?: string | null
+  department_assigned_id?: string | null
+  steps?: Array<{
+    id: string
+    title: string
+    description?: string | null
+    allow_proof?: boolean
+    allow_comments?: boolean
+    has_cost?: boolean
+    expected_cost?: number | string | null
+    fields?: Array<{
+      id: string
+      label: string
+      type: 'text' | 'textarea' | 'checkbox'
+      required?: boolean
+      placeholder?: string | null
+    }>
+  }>
+}
 
 const props = defineProps<{
+  task: { data: TaskEditPayload } | TaskEditPayload
   departments: { data: Department[] }
   presets?: { data: TaskPresetOption[] }
 }>()
+
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
+  {
+    title: 'Tasks',
+    href: taskRoute.index(),
+  },
+  {
+    title: String(task.value.title),
+    href: taskRoute.edit(task.value.id),
+  },
+])
+
+const task = computed(() => ('data' in props.task ? props.task.data : props.task))
 
 const uid = () =>
   crypto.randomUUID?.() ??
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
+const mapDbTypeToUi = (type: 'text' | 'textarea' | 'checkbox'): StepField['type'] => {
+  if (type === 'textarea') return 'textarea'
+  if (type === 'checkbox') return 'checkbox'
+  return 'input'
+}
+
+const mapPresetFieldType = (type: TaskPresetFieldOption['type']): StepField['type'] => {
+  if (type === 'textarea') return 'textarea'
+  if (type === 'checkbox') return 'checkbox'
+  return 'input'
+}
+
 const form = reactive({
-  title: '',
-  description: '',
-  department_id: '',
-  task_preset_id: '',
+  title: task.value.title ?? '',
+  description: task.value.description ?? '',
+  department_id: task.value.department_assigned_id ?? '',
+  task_preset_id: task.value.task_preset_id ?? '',
   step_order: 'sequential' as StepOrder,
 })
 
-const steps = ref<TaskStep[]>([
-  {
+const steps = ref<TaskStep[]>(
+  (task.value.steps ?? []).map((step, idx) => ({
+    id: step.id ?? uid(),
+    title: step.title || `Step ${idx + 1}`,
+    description: step.description ?? '',
+    fields: (step.fields ?? []).map((field) => ({
+      id: field.id ?? uid(),
+      label: field.label,
+      type: mapDbTypeToUi(field.type),
+      required: Boolean(field.required),
+      placeholder: field.placeholder ?? undefined,
+    })),
+    allowComments: step.allow_comments !== false,
+    allow_proof: Boolean(step.allow_proof),
+    has_cost: Boolean(step.has_cost),
+    cost: step.expected_cost == null ? undefined : Number(step.expected_cost),
+  }))
+)
+
+if (steps.value.length === 0) {
+  steps.value = [{
     id: uid(),
     title: 'Step 1',
     description: '',
     fields: [],
     allowComments: true,
-
-    allow_proof: true,
+    allow_proof: false,
     has_cost: false,
     cost: undefined,
-  },
-])
+  }]
+}
 
 const addStep = () => {
   steps.value.push({
@@ -77,7 +146,6 @@ const addStep = () => {
     description: '',
     fields: [],
     allowComments: true,
-
     allow_proof: false,
     has_cost: false,
     cost: undefined,
@@ -105,19 +173,9 @@ const removeField = (stepId: string, fieldId: string) => {
 const canSaveTask = computed(() => {
   if (!form.title.trim()) return false
   if (steps.value.length === 0) return false
-
-  return steps.value.every(s => {
-    if (!s.title.trim()) return false
-    if (s.has_cost) {
-      if (s.cost == null) return false
-      if (Number.isNaN(s.cost)) return false
-      if (s.cost < 0) return false
-    }
-    return true
-  })
+  return steps.value.every(s => s.title.trim().length > 0)
 })
 
-/** Field Dialog state */
 const fieldDialogOpen = ref(false)
 const activeStepId = ref<string | null>(null)
 
@@ -137,16 +195,7 @@ const addBulkFieldsToActiveStep = (fields: NewFieldInput[]) => {
   if (!activeStepId.value) return
   const step = steps.value.find(s => s.id === activeStepId.value)
   if (!step) return
-
-  fields.forEach((field) => {
-    step.fields.push({ id: uid(), ...field })
-  })
-}
-
-const mapPresetFieldType = (type: TaskPresetFieldOption['type']): StepField['type'] => {
-  if (type === 'textarea') return 'textarea'
-  if (type === 'checkbox') return 'checkbox'
-  return 'input'
+  fields.forEach((field) => step.fields.push({ id: uid(), ...field }))
 }
 
 watch(
@@ -163,55 +212,48 @@ watch(
     const presetSteps = preset.steps ?? []
     steps.value = presetSteps.length > 0
       ? presetSteps.map((presetStep, index) => ({
+        id: uid(),
+        title: presetStep.title || `Step ${index + 1}`,
+        description: presetStep.description || '',
+        fields: (presetStep.fields ?? []).map((field) => ({
           id: uid(),
-          title: presetStep.title || `Step ${index + 1}`,
-          description: presetStep.description || '',
-          fields: (presetStep.fields ?? []).map((field) => ({
-            id: uid(),
-            label: field.label,
-            type: mapPresetFieldType(field.type),
-            required: Boolean(field.required),
-            placeholder: field.placeholder ?? undefined,
-          })),
-          allowComments: presetStep.allow_comments !== false,
-          allow_proof: Boolean(presetStep.allow_proof),
-          has_cost: Boolean(presetStep.has_cost),
-          cost: presetStep.expected_cost == null ? undefined : Number(presetStep.expected_cost),
-        }))
-      : [{
-          id: uid(),
-          title: 'Step 1',
-          description: '',
-          fields: [],
-          allowComments: true,
-          allow_proof: false,
-          has_cost: false,
-          cost: undefined,
-        }]
+          label: field.label,
+          type: mapPresetFieldType(field.type),
+          required: Boolean(field.required),
+          placeholder: field.placeholder ?? undefined,
+        })),
+        allowComments: presetStep.allow_comments !== false,
+        allow_proof: Boolean(presetStep.allow_proof),
+        has_cost: Boolean(presetStep.has_cost),
+        cost: presetStep.expected_cost == null ? undefined : Number(presetStep.expected_cost),
+      }))
+      : []
   }
 )
+
 const payload = computed(() => ({
   ...form,
   steps: steps.value.map((s, idx) => ({ ...s, order: idx + 1 })),
 }))
 
 const submit = () => {
-  router.post(task.store().url, payload.value)
+  router.patch(taskRoute.update(task.value.id).url, payload.value, {
+    onSuccess: () => {
+      toast.success('Task updated successfully!');
+    }
+  })
 }
 </script>
 
 <template>
-  <Head title="Create Task" />
 
-  <AppLayout>
+  <Head title="Edit Task" />
+
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="flex flex-col gap-4 p-4">
-      <!-- Header -->
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-semibold tracking-tight">Create Task</h1>
-          <p class="text-sm text-muted-foreground">
-            Build a task with steps, custom fields, proof requirements, and step discussion.
-          </p>
+          <h1 class="text-2xl font-semibold tracking-tight">Edit Task</h1>
         </div>
 
         <div class="flex items-center gap-2">
@@ -220,51 +262,24 @@ const submit = () => {
             Add Step
           </Button>
           <Button type="button" :disabled="!canSaveTask" @click="submit">
-            Save Task
+            Update Task
           </Button>
         </div>
       </div>
 
       <div class="grid gap-4">
         <div class="space-y-4">
-          <TaskInfoCard
-            v-model:title="form.title"
-            v-model:description="form.description"
-            v-model:departmentId="form.department_id"
-            v-model:presetId="form.task_preset_id"
-            v-model:stepOrder="form.step_order"
-            :departments="props.departments.data"
-            :presets="props.presets?.data ?? []"
-            :steps="steps"
-          />
+          <TaskInfoCard v-model:title="form.title" v-model:description="form.description"
+            v-model:departmentId="form.department_id" v-model:presetId="form.task_preset_id"
+            v-model:stepOrder="form.step_order" :departments="props.departments.data"
+            :presets="props.presets?.data ?? []" :steps="steps" />
 
-          <StepsBuilder
-            v-model:steps="steps"
-            @add-step="addStep"
-            @remove-step="removeStep"
-            @move-step="moveStep"
-            @add-field="openAddField"
-            @remove-field="removeField"
-          />
+          <StepsBuilder v-model:steps="steps" @add-step="addStep" @remove-step="removeStep" @move-step="moveStep"
+            @add-field="openAddField" @remove-field="removeField" />
         </div>
-
-        <!-- <LivePreview
-          :title="form.title"
-          :description="form.description"
-          :department-id="form.department_id"
-          :steps="steps"
-          :can-save="canSaveTask"
-          @save="submit"
-        /> -->
       </div>
 
-      <FieldDialog
-        v-model:open="fieldDialogOpen"
-        @add="addFieldToActiveStep"
-        @add-bulk="addBulkFieldsToActiveStep"
-      />
+      <FieldDialog v-model:open="fieldDialogOpen" @add="addFieldToActiveStep" @add-bulk="addBulkFieldsToActiveStep" />
     </div>
-
-    <pre>{{ payload }}</pre>
   </AppLayout>
 </template>

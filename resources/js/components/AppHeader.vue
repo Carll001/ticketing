@@ -40,6 +40,7 @@ import type { BreadcrumbItem, NavItem } from '@/types';
 import user from '@/routes/user';
 import department from '@/routes/department';
 import task from '@/routes/task';
+import taskPreset from '@/routes/taskPreset';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -75,6 +76,11 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Task',
         href: task.index(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Task Preset',
+        href: taskPreset.index(),
         icon: LayoutGrid,
     },
 ];

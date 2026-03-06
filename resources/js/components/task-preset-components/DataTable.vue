@@ -39,25 +39,31 @@ import {
 } from '@/components/ui/table'
 import { User } from '@/types'
 import { router } from '@inertiajs/vue3'
-import { Task } from '@/types/task'
-import task from '@/routes/task'
+import taskPreset from '@/routes/taskPreset'
+
+type TaskPresetRow = {
+    id: string
+    name: string
+    description?: string | null
+    created_at?: string
+    updated_at?: string
+}
 
 const props = defineProps<{
-    tasks: Task[]
+    presets: TaskPresetRow[]
     auth: User
 }>()
 
 const [DefineTemplate, ReuseTemplate] = createReusableTemplate<{
-    task: Task
+    preset: TaskPresetRow
 }>()
 
-const createTask = () => router.visit(task.create())
-const editTask = (id: string) => router.visit(task.edit(id))
-const showTask = (id: string) => router.visit(task.show(id))
-const removeTask = (id: string) => router.delete(task.destroy(id).url)
-const isAdmin = props.auth?.role === 'admin'
+const createPreset = () => router.visit(taskPreset.create())
+const editPreset = (id: string) => router.visit(taskPreset.edit(id))
+const showPreset = (id: string) => router.visit(taskPreset.show(id))
+const removePreset = (id: string) => router.delete(taskPreset.destroy(id).url)
 
-const columns: ColumnDef<Task>[] = [
+const columns: ColumnDef<TaskPresetRow>[] = [
     {
         id: 'select',
         header: ({ table }) => h(Checkbox, {
@@ -74,90 +80,20 @@ const columns: ColumnDef<Task>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: 'title',
-        header: 'Title',
-        cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('title')),
-    },
-    {
-        id: 'department_assigned',
-        header: 'Department Assigned',
-        cell: ({ row }) => {
-            const task = row.original
-            const departmentName = task.department_assigned?.name
-
-            return h(
-                'div',
-                { class: departmentName ? 'capitalize' : 'text-muted-foreground italic' },
-                departmentName || 'Open for anyone'
-            )
-        },
-    },
-    {
-        id: 'creator',
-        header: 'Creator',
-        cell: ({ row }) => {
-            const task = row.original
-            const creatorName = task.creator?.name
-
-            return h(
-                'div',
-                { class: creatorName ? '' : 'text-muted-foreground italic' },
-                creatorName || '-'
-            )
-        },
-    },
-    {
-        id: 'steps_count',
-        header: 'Steps',
-        cell: ({ row }) => {
-            const count = row.original.steps_count ?? 0
-            return h('div', String(count))
-        },
-    },
-    {
-        id: 'last_step',
-        header: 'Last Step',
-        cell: ({ row }) => {
-            const currentTask = row.original
-            const lastStepTitle = currentTask.last_step?.title
-            const lastStepTaker = currentTask.last_step?.claimed_by?.name
-
-            if (!lastStepTitle) {
-                return h('div', { class: 'text-muted-foreground italic' }, 'No steps')
-            }
-
-            return h('div', { class: 'space-y-1' }, [
-                h('p', { class: 'text-sm font-medium' }, lastStepTitle),
-                ...(isAdmin
-                    ? [h('p', { class: 'text-xs text-muted-foreground' }, `Taker: ${lastStepTaker || 'Unclaimed'}`)]
-                    : []),
-            ])
-        },
-    },
-    {
-        id: 'status',
-        header: 'Status',
-        cell: ({ row }) => {
-            const status = row.original.last_step?.status || row.original.status || 'pending'
-            const label = status === 'done'
-                ? 'Completed'
-                : status === 'in_progress'
-                    ? 'In Progress'
-                    : 'Pending'
-            return h('div', label)
-        },
+        accessorKey: 'name',
+        header: 'Name',
+        cell: ({ row }) => h('div', { class: 'capitalize' }, row.getValue('name')),
     },
     {
         id: 'actions',
-        header: 'Actions',
         enableHiding: false,
         cell: ({ row }) => {
-            const currentTask = row.original
+            const preset = row.original
 
             return h('div', { class: 'flex justify-end' }, [
                 h(ReuseTemplate, {
-                    task: currentTask,
-                }),
+                    preset,
+                })
             ])
         },
     },
@@ -169,7 +105,7 @@ const columnVisibility = ref<VisibilityState>({})
 const rowSelection = ref({})
 
 const table = useVueTable({
-    get data() { return props.tasks },
+    get data() { return props.presets },
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -189,7 +125,7 @@ const table = useVueTable({
 </script>
 
 <template>
-    <DefineTemplate v-slot="{ task }">
+    <DefineTemplate v-slot="{ preset }">
         <DropdownMenu>
             <DropdownMenuTrigger as-child>
                 <Button variant="ghost" class="h-8 w-8 p-0">
@@ -201,30 +137,29 @@ const table = useVueTable({
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
-                <DropdownMenuItem @click="editTask(task.id)">
-                    Edit Task
+                <DropdownMenuItem @click="editPreset(preset.id)">
+                    Edit Preset
                 </DropdownMenuItem>
 
-                <DropdownMenuItem @click="showTask(task.id)">
-                    View Task
+                <DropdownMenuItem @click="showPreset(preset.id)">
+                    View Preset
                 </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem @click="removeTask(task.id)">
-                    Remove Task
+                <DropdownMenuItem @click="removePreset(preset.id)">
+                    Remove Preset
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
-        <Button size="sm" @click="showTask(task.id)">View Task</Button>
     </DefineTemplate>
     <div class="w-full">
         <div class="flex items-center py-4">
-            <Input class="max-w-sm" placeholder="Filter tasks..."
-                :model-value="table.getColumn('title')?.getFilterValue() as string"
-                @update:model-value="table.getColumn('title')?.setFilterValue($event)" />
+            <Input class="max-w-sm" placeholder="Filter presets..."
+                :model-value="table.getColumn('name')?.getFilterValue() as string"
+                @update:model-value="table.getColumn('name')?.setFilterValue($event)" />
 
-            <Button @click="createTask" class="ml-auto">Create</Button>
+            <Button @click="createPreset" class="ml-auto">Create Preset</Button>
         </div>
         <div class="rounded-md border">
             <Table>

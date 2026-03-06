@@ -26,7 +26,7 @@ const emit = defineEmits<{
     </CardHeader>
 
     <CardContent class="space-y-3">
-      <Accordion type="multiple" class="w-full">
+      <Accordion type="multiple" class="w-full space-y-4">
         <StepEditor
           v-for="(step, idx) in steps"
           :key="step.id"

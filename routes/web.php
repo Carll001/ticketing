@@ -39,6 +39,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create', [TaskController::class, 'create'])->name('create');
         Route::post('/', [TaskController::class, 'store'])->name('store');
         Route::get('/{task}', [TaskController::class, 'show'])->name('show');
+        Route::post('/{task}/steps/{taskStep}/claim', [TaskController::class, 'claimStep'])->name('step.claim');
+        Route::post('/{task}/steps/{taskStep}/respond', [TaskController::class, 'respondStep'])->name('step.respond');
+        Route::post('/{task}/steps/{taskStep}/comment', [TaskController::class, 'commentStep'])->name('step.comment');
         Route::get('/{task}/edit', [TaskController::class, 'edit'])->name('edit');
         Route::patch('/{task}', [TaskController::class, 'update'])->name('update');
         Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');

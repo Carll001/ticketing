@@ -18,6 +18,7 @@ import {
   PencilLine,
   AlignLeft,
   CheckSquare,
+  DollarSign,
 } from 'lucide-vue-next'
 import { StepField, TaskStep } from '@/types/task-builder'
 
@@ -63,17 +64,20 @@ const proofLabel = computed(() => (step.value.allow_proof ? 'Allowed' : 'None'))
               {{ step.title || 'Untitled step' }}
             </span>
             <span class="truncate text-left text-xs text-muted-foreground">
-              {{ step.fields.length }} field(s) • Proof: {{ proofLabel }} • Comments: {{ step.allowComments ? 'On' : 'Off' }}
+              {{ step.fields.length }} field(s) • Proof: {{ proofLabel }} • Comments: {{ step.allowComments ? 'On' :
+              'Off' }}
             </span>
           </div>
         </div>
       </AccordionTrigger>
 
       <div class="ml-2 flex items-center gap-1">
-        <Button size="icon" variant="ghost" type="button" @click.stop="emit('move', props.index - 1)" :disabled="props.index === 0">
+        <Button size="icon" variant="ghost" type="button" @click.stop="emit('move', props.index - 1)"
+          :disabled="props.index === 0">
           ▲
         </Button>
-        <Button size="icon" variant="ghost" type="button" @click.stop="emit('move', props.index + 1)" :disabled="props.index === props.total - 1">
+        <Button size="icon" variant="ghost" type="button" @click.stop="emit('move', props.index + 1)"
+          :disabled="props.index === props.total - 1">
           ▼
         </Button>
         <Button size="icon" variant="ghost" type="button" @click.stop="emit('remove')" :disabled="!canRemove">
@@ -98,42 +102,36 @@ const proofLabel = computed(() => (step.value.allow_proof ? 'Allowed' : 'None'))
 
           <Separator />
 
-<div class="flex items-center justify-between rounded-md border px-3 py-2">
-  <div class="flex items-center gap-2">
-    <FileUp class="h-4 w-4 text-muted-foreground" />
-    <div class="flex flex-col">
-      <span class="text-sm font-medium">Allow proof</span>
-      <span class="text-xs text-muted-foreground">
-        Assignee may attach proof (text, image, or file)
-      </span>
-    </div>
-  </div>
-  <Switch v-model:checked="step.allow_proof" />
-</div>
+          <div class="flex items-center justify-between rounded-md border px-3 py-2">
+            <div class="flex items-center gap-2">
+              <FileUp class="h-4 w-4 text-muted-foreground" />
+              <div class="flex flex-col">
+                <span class="text-sm font-medium">Allow proof</span>
+                <span class="text-xs text-muted-foreground">
+                  Assignee may attach proof (text, image, or file)
+                </span>
+              </div>
+            </div>
+            <Switch v-model="step.allow_proof" />
+          </div>
 
-<Separator />
+          <Separator />
 
-<div class="space-y-2">
-  <div class="flex items-center justify-between rounded-md border px-3 py-2">
-    <div class="flex flex-col">
-      <span class="text-sm font-medium">Has cost</span>
-      <span class="text-xs text-muted-foreground">This step requires a fee</span>
-    </div>
-    <Switch v-model:checked="step.has_cost" />
-  </div>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between rounded-md border px-3 py-2">
+              <div class="flex flex-col">
+                <span class="text-sm font-medium">Has cost</span>
+                <span class="text-xs text-muted-foreground">This step requires a fee</span>
+              </div>
+              <Switch v-model="step.has_cost" />
+            </div>
 
-  <div v-if="step.has_cost" class="space-y-2">
-    <Label>Cost</Label>
-    <Input
-      type="number"
-      min="0"
-      step="0.01"
-      :model-value="step.cost ?? ''"
-      @update:model-value="(v) => (step.cost = v === '' ? undefined : Number(v))"
-      placeholder="0.00"
-    />
-  </div>
-</div>
+            <div v-if="step.has_cost" class="space-y-2">
+              <Label>Cost</Label>
+              <Input type="number" min="0" step="0.01" :model-value="step.cost ?? ''"
+                @update:model-value="(v) => (step.cost = v === '' ? undefined : Number(v))" placeholder="0.00" />
+            </div>
+          </div>
 
           <Separator />
 
@@ -145,7 +143,7 @@ const proofLabel = computed(() => (step.value.allow_proof ? 'Allowed' : 'None'))
                 <span class="text-xs text-muted-foreground">Creator & user can comment on this step</span>
               </div>
             </div>
-            <Switch v-model:checked="step.allowComments" />
+            <Switch v-model="step.allowComments" />
           </div>
         </div>
 
@@ -163,16 +161,14 @@ const proofLabel = computed(() => (step.value.allow_proof ? 'Allowed' : 'None'))
             </Button>
           </div>
 
-          <div v-if="step.fields.length === 0" class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+          <div v-if="step.fields.length === 0"
+            class="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
             No fields yet. Add an input, checkbox, or textarea.
           </div>
 
           <div v-else class="space-y-2">
-            <div
-              v-for="f in step.fields"
-              :key="f.id"
-              class="flex items-start justify-between gap-3 rounded-lg border p-3"
-            >
+            <div v-for="f in step.fields" :key="f.id"
+              class="flex items-start justify-between gap-3 rounded-lg border p-3">
               <div class="flex min-w-0 items-start gap-3">
                 <component :is="fieldTypeMeta(f.type).icon" class="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <div class="min-w-0">
