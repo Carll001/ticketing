@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
+import { BookOpen, Building, Building2, Building2Icon, Check, ClipboardCheck, Folder, LayoutGrid, Logs, Menu, Search, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -70,25 +70,25 @@ const mainNavItems = computed<NavItem[]>(() => [
         : []),
 
     ...(hasPermission('manage users')
-        ? [{ title: 'Manage User', href: user.index(), icon: LayoutGrid }]
+        ? [{ title: 'Manage Users', href: user.index(), icon: Users }]
         : []),
 
     ...(hasPermission('manage departments')
-        ? [{ title: 'Manage Department', href: department.index(), icon: LayoutGrid }]
+        ? [{ title: 'Manage Department', href: department.index(), icon: Building2Icon }]
         : []),
 
     {
         title: 'Task',
         href: task.index(),
-        icon: LayoutGrid,
+        icon: ClipboardCheck ,
     },
 
     ...(hasPermission('manage presets')
-        ? [{ title: 'Task Preset', href: taskPreset.index(), icon: LayoutGrid }]
+        ? [{ title: 'Task Preset', href: taskPreset.index(), icon: ClipboardCheck }]
         : []),
 
     ...(hasPermission('manage transactions')
-        ? [{ title: 'Transaction', href: transaction.index(), icon: LayoutGrid }]
+        ? [{ title: 'Transaction', href: transaction.index(), icon:  Logs }]
         : []),
 ]);
 
