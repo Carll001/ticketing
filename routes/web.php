@@ -38,15 +38,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('task')->name('task.')->group(function() {
         Route::get('/', [TaskController::class, 'index'])->name('index');
-        Route::get('/create', [TaskController::class, 'create'])->middleware('manage tasks')->name('create');
-        Route::post('/', [TaskController::class, 'store'])->middleware('manage tasks')->name('store');
+        Route::get('/create', [TaskController::class, 'create'])->middleware('permission:manage tasks')->name('create');
+        Route::post('/', [TaskController::class, 'store'])->middleware('permission:manage tasks')->name('store');
         Route::get('/{task}', [TaskController::class, 'show'])->name('show');
         Route::post('/{task}/steps/{taskStep}/claim', [TaskController::class, 'claimStep'])->name('step.claim');
         Route::post('/{task}/steps/{taskStep}/respond', [TaskController::class, 'respondStep'])->name('step.respond');
         Route::post('/{task}/steps/{taskStep}/comment', [TaskController::class, 'commentStep'])->name('step.comment');
-        Route::get('/{task}/edit', [TaskController::class, 'edit'])->middleware('manage tasks')->name('edit');
-        Route::patch('/{task}', [TaskController::class, 'update'])->middleware('manage tasks')->name('update');
-        Route::delete('/{task}', [TaskController::class, 'destroy'])->middleware('manage tasks')->name('destroy');
+        Route::get('/{task}/edit', [TaskController::class, 'edit'])->middleware('permission:manage tasks')->name('edit');
+        Route::patch('/{task}', [TaskController::class, 'update'])->middleware('permission:manage tasks')->name('update');
+        Route::delete('/{task}', [TaskController::class, 'destroy'])->middleware('permission:manage tasks')->name('destroy');
         
     });
 

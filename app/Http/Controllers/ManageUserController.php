@@ -21,8 +21,15 @@ class ManageUserController extends Controller
 
     public function index()
     {
+        if(auth()->user()->role === 'superadmin')
+        {
+            $users = UserResource::collection(User::whereNot('role', 'superadmin')->with('departments')->get());
+        }else{
+            $users = UserResource::collection(User::whereNot('role', ['superadmin', 'admin'])->with('departments')->get());
+        }
+        
         return Inertia::render('manage-user/Index', [
-            'users' => UserResource::collection(User::whereNot('role', 'superadmin')->with('departments')->get()),
+            'users' => $users,
             'departments' => DepartmentResource::collection(Department::all())
         ]);
     }
