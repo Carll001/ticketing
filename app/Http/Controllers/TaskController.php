@@ -13,15 +13,21 @@ use App\Models\TaskStep;
 use App\Models\TaskStepComment;
 use App\Models\TaskStepField;
 use App\Models\User;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    public function __construct(private readonly TransactionService $transactionService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -66,8 +72,9 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validateTaskPayload($request);
+        $task = null;
 
-        DB::transaction(function () use ($validated, $request) {
+        DB::transaction(function () use ($validated, $request, &$task) {
             $costTotal = collect($validated['steps'])
                 ->filter(fn($step) => (bool)($step['has_cost'] ?? false))
                 ->sum(fn($step) => (float)($step['cost'] ?? 0));
@@ -83,6 +90,14 @@ class TaskController extends Controller
 
             $this->syncTaskSteps($task, $validated['steps']);
         });
+
+        if ($task) {
+            $this->logTransactionSafely('task_created', [
+                'task' => $task,
+                'actor' => $request->user(),
+                'summary' => "Task created: {$task->title}",
+            ]);
+        }
 
         return redirect()->route('task.index');
     }
@@ -125,6 +140,7 @@ class TaskController extends Controller
     public function update(Request $request, Task $task)
     {
         $validated = $this->validateTaskPayload($request);
+        $taskTitle = $task->title;
 
         DB::transaction(function () use ($task, $validated) {
             $costTotal = collect($validated['steps'])
@@ -143,6 +159,12 @@ class TaskController extends Controller
             $this->syncTaskSteps($task, $validated['steps']);
         });
 
+        $this->logTransactionSafely('task_updated', [
+            'task' => $task,
+            'actor' => $request->user(),
+            'summary' => "Task updated: {$taskTitle}",
+        ]);
+
         return redirect()->route('task.index');
     }
 
@@ -151,7 +173,16 @@ class TaskController extends Controller
      */
     public function destroy(Task $task)
     {
-        $task->delete();
+        DB::transaction(function () use ($task) {
+            $summary = "Task deleted: {$task->title}";
+            $this->logTransactionSafely('task_deleted', [
+                'task' => $task,
+                'actor' => request()->user(),
+                'summary' => $summary,
+            ]);
+
+            $task->delete();
+        });
 
         return redirect()->route('task.index');
     }
@@ -175,6 +206,16 @@ class TaskController extends Controller
                 'claimed_by_user_id' => $currentUserId,
                 'claimed_at' => now(),
                 'status' => 'in_progress',
+            ]);
+
+            $this->logTransactionSafely('step_claimed', [
+                'task' => $task,
+                'taskStep' => $taskStep,
+                'actor' => request()->user(),
+                'summary' => "Step claimed: {$taskStep->title} in {$task->title}",
+                'meta' => [
+                    'status' => 'in_progress',
+                ],
             ]);
         }
 
@@ -305,6 +346,17 @@ class TaskController extends Controller
             'status' => 'done',
         ]);
 
+        $this->logTransactionSafely('step_responded', [
+            'task' => $task,
+            'taskStep' => $taskStep,
+            'actor' => $request->user(),
+            'summary' => "Step completed: {$taskStep->title} in {$task->title}",
+            'meta' => [
+                'response_count' => count($responses),
+                'submitted_cost' => $validated['submitted_cost'] ?? null,
+            ],
+        ]);
+
         return back();
     }
 
@@ -336,6 +388,16 @@ class TaskController extends Controller
             'task_step_id' => $taskStep->id,
             'user_id' => $currentUserId,
             'message' => $validated['message'],
+        ]);
+
+        $this->logTransactionSafely('step_commented', [
+            'task' => $task,
+            'taskStep' => $taskStep,
+            'actor' => $request->user(),
+            'summary' => "Comment added on step: {$taskStep->title} in {$task->title}",
+            'meta' => [
+                'comment_preview' => Str::limit($validated['message'], 120),
+            ],
         ]);
 
         return back();
@@ -422,5 +484,14 @@ class TaskController extends Controller
         return $user->departments()
             ->where('departments.id', $task->department_assigned_id)
             ->exists();
+    }
+
+    private function logTransactionSafely(string $action, array $payload): void
+    {
+        try {
+            $this->transactionService->log($action, $payload);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 }

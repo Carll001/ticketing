@@ -204,5 +204,6 @@ const isPermissionChecked = (permissionName: string) => {
                 </Card>
             </section>
         </form>
+        <pre>{{form}}</pre>
     </AppLayout>
 </template>

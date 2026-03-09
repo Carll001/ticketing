@@ -41,6 +41,7 @@ import user from '@/routes/user';
 import department from '@/routes/department';
 import task from '@/routes/task';
 import taskPreset from '@/routes/taskPreset';
+import transaction from '@/routes/transaction';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -53,37 +54,43 @@ const props = withDefaults(defineProps<Props>(), {
 const page = usePage();
 const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+const permissions = computed<string[]>(() => {
+    return (auth.value?.permissions ?? []) as string[];
+});
+
+const hasPermission = (permission: string) =>
+    permissions.value.includes(permission);
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Manage User',
-        href: user.index(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Manage Department',
-        href: department.index(),
-        icon: LayoutGrid,
-    },
+const mainNavItems = computed<NavItem[]>(() => [
+    ...(hasPermission('manage dashboard')
+        ? [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }]
+        : []),
+
+    ...(hasPermission('manage users')
+        ? [{ title: 'Manage User', href: user.index(), icon: LayoutGrid }]
+        : []),
+
+    ...(hasPermission('manage departments')
+        ? [{ title: 'Manage Department', href: department.index(), icon: LayoutGrid }]
+        : []),
+
     {
         title: 'Task',
         href: task.index(),
         icon: LayoutGrid,
     },
-    {
-        title: 'Task Preset',
-        href: taskPreset.index(),
-        icon: LayoutGrid,
-    },
-];
+
+    ...(hasPermission('manage presets')
+        ? [{ title: 'Task Preset', href: taskPreset.index(), icon: LayoutGrid }]
+        : []),
+
+    ...(hasPermission('manage transactions')
+        ? [{ title: 'Transaction', href: transaction.index(), icon: LayoutGrid }]
+        : []),
+]);
 
 const rightNavItems: NavItem[] = [
     {

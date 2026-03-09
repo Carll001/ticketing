@@ -3,24 +3,49 @@
 namespace Database\Seeders;
 
 use App\Models\Permission;
-use App\Models\Role;
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-
+use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        Permission::firstOrCreate(['name' => 'manage users']);
-        Permission::firstOrCreate(['name' => 'manage departments']);
-        Permission::firstOrCreate(['name' => 'manage tasks']);
-        Permission::firstOrCreate(['name' => 'manage transactions']);
+        $permissions = [
+            'manage dashboard',
+            'manage users',
+            'manage departments',
+            'manage tasks',
+            'manage task presets',
+            'manage transactions',
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+
+        $superadmin = User::firstOrCreate(
+            ['email' => 'superadmin@gmail.com'],
+            [
+                'name' => 'superadmin',
+                'password' => Hash::make('password'),
+                'role' => 'superadmin',
+            ]
+        );
+
+        $regularUser = User::firstOrCreate(
+            ['email' => 'regularuser@gmail.com'],
+            [
+                'name' => 'regular user',
+                'password' => Hash::make('password'),
+                'role' => 'user',
+            ]
+        );
+
+        $superadmin->syncPermissions(Permission::pluck('name')->toArray());
+        $regularUser->syncPermissions([]);
     }
 }

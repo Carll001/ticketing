@@ -22,7 +22,7 @@ class ManageUserController extends Controller
     public function index()
     {
         return Inertia::render('manage-user/Index', [
-            'users' => UserResource::collection(User::with('departments')->get()),
+            'users' => UserResource::collection(User::whereNot('role', 'superadmin')->with('departments')->get()),
             'departments' => DepartmentResource::collection(Department::all())
         ]);
     }
