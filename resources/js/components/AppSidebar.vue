@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,15 +16,27 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import profile from '@/routes/profile';
 import type { NavItem } from '@/types';
+import type { Auth } from '@/types/auth';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
+const page = usePage();
+const auth = computed(() => page.props.auth as Auth);
+const isSuperAdmin = computed<boolean>(() => Boolean(auth.value?.is_super_admin));
+const permissions = computed<string[]>(() => (auth.value?.permissions ?? []) as string[]);
+const hasPermission = (permission: string) => isSuperAdmin.value || permissions.value.includes(permission);
+
+const mainNavItems = computed<NavItem[]>(() => [
+    ...(hasPermission('manage dashboard')
+        ? [{
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+        }]
+        : []),
+]);
+
+const homeHref = computed(() => hasPermission('manage dashboard') ? dashboard() : profile.edit());
 
 const footerNavItems: NavItem[] = [
     {
@@ -45,7 +58,7 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link :href="dashboard()">
+                        <Link :href="homeHref">
                             <AppLogo />
                         </Link>
                     </SidebarMenuButton>

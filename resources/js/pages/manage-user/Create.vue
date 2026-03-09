@@ -17,6 +17,7 @@ import { computed, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'vue-sonner'
 import { BreadcrumbItem } from '@/types';
+import { Auth } from '@/types/auth';
 
 const props = defineProps<{
     departments: { data: Department[] }
@@ -34,8 +35,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
-const auth = computed(() => page.props.auth);
-const isSuperAdmin = computed(() => auth.value.user.role === 'superadmin')
+const auth = computed(() => page.props.auth as Auth);
+const isSuperAdmin = computed(() => Boolean(auth.value?.is_super_admin))
 
 const open = ref(false)
 
@@ -67,14 +68,23 @@ const toggleDepartment = (id: string) => {
     }
 }
 
-const togglePermission = (value: string) => {
-    const index = form.permissions.indexOf(value)
-    if (index === -1) {
-        form.permissions.push(value)
-    } else {
-        form.permissions.splice(index, 1)
-    }
-}
+const isPermissionChecked = (permissionName: string) => {
+    return computed({
+        get: () => form.permissions.includes(permissionName),
+        set: (value: boolean) => {
+            if (value) {
+                if (!form.permissions.includes(permissionName)) {
+                    form.permissions.push(permissionName);
+                }
+            } else {
+                const index = form.permissions.indexOf(permissionName);
+                if (index > -1) {
+                    form.permissions.splice(index, 1);
+                }
+            }
+        }
+    });
+};
 
 const createUser = () => {
     form.post(user.store().url, {
@@ -200,8 +210,7 @@ const createUser = () => {
                             </Label>
                             <Checkbox
                                 :id="permission.value"
-                                :checked="form.permissions.includes(permission.value)"
-                                @update:checked="togglePermission(permission.value)"
+                                v-model="isPermissionChecked(permission.value).value"
                             />
                         </div>
                         <InputError :message="form.errors.permissions" />

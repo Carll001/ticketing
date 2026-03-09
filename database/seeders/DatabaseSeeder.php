@@ -24,7 +24,10 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => config('auth.defaults.guard', 'web'),
+            ]);
         }
 
         $superadmin = User::firstOrCreate(
@@ -32,7 +35,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'superadmin',
                 'password' => Hash::make('password'),
-                'role' => 'superadmin',
+                'role' => 'super_admin',
             ]
         );
 
@@ -54,8 +57,12 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $superadmin->syncPermissions(Permission::pluck('name')->toArray());
-        $admin->syncPermissions(Permission::pluck('name')->toArray());
+        // Super admin bypasses permission checks via Gate::before.
+        $superadmin->syncRoles([]);
+        $superadmin->syncPermissions([]);
+        $admin->syncRoles([]);
+        $admin->syncPermissions([]);
+        $regularUser->syncRoles([]);
         $regularUser->syncPermissions([]);
     }
 }

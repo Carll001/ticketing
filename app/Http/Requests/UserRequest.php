@@ -16,6 +16,7 @@ class UserRequest extends FormRequest
     {
         $this->merge([
             'role' => $this->role ?? 'staff',
+            'permissions' => $this->permissions ?? [],
         ]);
     }
 
@@ -48,8 +49,13 @@ class UserRequest extends FormRequest
             'role' => ['nullable', 'string'],
 
             // Spatie permission names
-            'permissions' => ['sometimes', 'array'],
-            'permissions.*' => ['string', 'exists:permissions,name'],
+            'permissions' => ['array'],
+            'permissions.*' => [
+                'string',
+                Rule::exists('permissions', 'name')->where(
+                    fn ($query) => $query->where('guard_name', config('auth.defaults.guard', 'web'))
+                ),
+            ],
         ];
     }
 }

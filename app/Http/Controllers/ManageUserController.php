@@ -21,13 +21,16 @@ class ManageUserController extends Controller
 
     public function index()
     {
-        if(auth()->user()->role === 'superadmin')
-        {
-            $users = UserResource::collection(User::whereNot('role', 'superadmin')->with('departments')->get());
-        }else{
-            $users = UserResource::collection(User::whereNot('role', ['superadmin', 'admin'])->with('departments')->get());
+        if (auth()->user()->isSuperAdmin()) {
+            $users = UserResource::collection(
+                User::whereNotIn('role', ['superadmin', 'super_admin'])->with('departments')->get()
+            );
+        } else {
+            $users = UserResource::collection(
+                User::whereNotIn('role', ['superadmin', 'super_admin', 'admin'])->with('departments')->get()
+            );
         }
-        
+
         return Inertia::render('manage-user/Index', [
             'users' => $users,
             'departments' => DepartmentResource::collection(Department::all())
@@ -43,7 +46,15 @@ class ManageUserController extends Controller
 
     public function store(UserRequest $request)
     {
-        $this->service->store($request->validated());
+        $payload = $request->validated();
+
+        if (!auth()->user()->isSuperAdmin()) {
+            $payload['role'] = 'staff';
+        } else {
+            $payload['role'] = $payload['role'] ?? 'staff';
+        }
+
+        $this->service->store($payload);
 
         return redirect()->route('user.index');
     }
@@ -58,7 +69,13 @@ class ManageUserController extends Controller
 
     public function update(UserRequest $request, User $user)
     {
-        $this->service->update($user, $request->validated());
+        $payload = $request->validated();
+
+        if (!auth()->user()->isSuperAdmin()) {
+            unset($payload['role']);
+        }
+
+        $this->service->update($user, $payload);
 
         return redirect()->route('user.index');
     }

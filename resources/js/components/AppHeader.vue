@@ -37,11 +37,13 @@ import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import type { Auth } from '@/types/auth';
 import user from '@/routes/user';
 import department from '@/routes/department';
 import task from '@/routes/task';
 import taskPreset from '@/routes/taskPreset';
 import transaction from '@/routes/transaction';
+import profile from '@/routes/profile';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -52,14 +54,15 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const page = usePage();
-const auth = computed(() => page.props.auth);
+const auth = computed(() => page.props.auth as Auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+const isSuperAdmin = computed<boolean>(() => Boolean(auth.value?.is_super_admin));
 const permissions = computed<string[]>(() => {
     return (auth.value?.permissions ?? []) as string[];
 });
 
 const hasPermission = (permission: string) =>
-    permissions.value.includes(permission);
+    isSuperAdmin.value || permissions.value.includes(permission);
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
@@ -77,13 +80,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         ? [{ title: 'Manage Department', href: department.index(), icon: LayoutGrid }]
         : []),
 
-    {
-        title: 'Task',
-        href: task.index(),
-        icon: LayoutGrid,
-    },
+    ...(hasPermission('manage tasks')
+        ? [{ title: 'Task', href: task.index(), icon: LayoutGrid }]
+        : []),
 
-    ...(hasPermission('manage presets')
+    ...(hasPermission('manage task presets')
         ? [{ title: 'Task Preset', href: taskPreset.index(), icon: LayoutGrid }]
         : []),
 
@@ -91,6 +92,17 @@ const mainNavItems = computed<NavItem[]>(() => [
         ? [{ title: 'Transaction', href: transaction.index(), icon: LayoutGrid }]
         : []),
 ]);
+
+const homeHref = computed(() => {
+    if (hasPermission('manage dashboard')) return dashboard();
+    if (hasPermission('manage tasks')) return task.index();
+    if (hasPermission('manage users')) return user.index();
+    if (hasPermission('manage departments')) return department.index();
+    if (hasPermission('manage task presets')) return taskPreset.index();
+    if (hasPermission('manage transactions')) return transaction.index();
+
+    return profile.edit();
+});
 
 const rightNavItems: NavItem[] = [
     {
@@ -177,7 +189,7 @@ const rightNavItems: NavItem[] = [
                     </Sheet>
                 </div>
 
-                <Link :href="dashboard()" class="flex items-center gap-x-2">
+                <Link :href="homeHref" class="flex items-center gap-x-2">
                     <AppLogo />
                 </Link>
 
