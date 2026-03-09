@@ -36,16 +36,26 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'name' => 'admin',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+            ]
+        );
+
         $regularUser = User::firstOrCreate(
             ['email' => 'regularuser@gmail.com'],
             [
-                'name' => 'regular user',
+                'name' => 'regular staff',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role' => 'staff',
             ]
         );
 
         $superadmin->syncPermissions(Permission::pluck('name')->toArray());
+        $admin->syncPermissions(Permission::pluck('name')->toArray());
         $regularUser->syncPermissions([]);
     }
 }

@@ -265,6 +265,6 @@ const submit = () => {
       />
     </div>
 
-    <pre>{{ payload }}</pre>
+    <!-- <pre>{{ payload }}</pre> -->
   </AppLayout>
 </template>
