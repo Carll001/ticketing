@@ -15,6 +15,7 @@ import { Department } from '@/types/department';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { Check, ChevronsUpDown } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { Auth } from '@/types/auth';
 
 const props = defineProps<{
     user: { data: User & { departments: Department[], permissions: { name: string }[] } }
@@ -33,15 +34,17 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const page = usePage()
-const auth = computed(() => page.props.auth as { user: { role: string } })
-const isSuperAdmin = computed(() => auth.value.user.role === 'superadmin')
+const auth = computed(() => page.props.auth as Auth)
+const isSuperAdmin = computed(() => Boolean(auth.value?.is_super_admin))
 
 const open = ref(false)
 
 const PERMISSIONS = [
+    { value: 'manage dashboard', label: 'Manage Dashboard' },
     { value: 'manage users', label: 'Manage Users' },
     { value: 'manage departments', label: 'Manage Departments' },
     { value: 'manage tasks', label: 'Manage Tasks' },
+    { value: 'manage task presets', label: 'Manage Task Presets' },
     { value: 'manage transactions', label: 'Manage Transactions' },
 ]
 
@@ -204,6 +207,5 @@ const isPermissionChecked = (permissionName: string) => {
                 </Card>
             </section>
         </form>
-        <pre>{{form}}</pre>
     </AppLayout>
 </template>
