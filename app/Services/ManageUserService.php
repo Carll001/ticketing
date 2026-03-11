@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 
 class ManageUserService
 {
@@ -19,6 +20,7 @@ class ManageUserService
         $user = User::create($data);
         $user->departments()->sync($departmentIds);
         $user->syncPermissions($permissions);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return $user;
     }
@@ -43,6 +45,7 @@ class ManageUserService
 
         if ($permissions !== null) {
             $user->syncPermissions($permissions);
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
         }
 
         return $user;

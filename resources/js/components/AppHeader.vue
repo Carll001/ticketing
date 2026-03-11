@@ -77,13 +77,11 @@ const mainNavItems = computed<NavItem[]>(() => [
         ? [{ title: 'Manage Department', href: department.index(), icon: LayoutGrid }]
         : []),
 
-    {
-        title: 'Task',
-        href: task.index(),
-        icon: LayoutGrid,
-    },
+    ...(hasPermission('manage tasks')
+        ? [{ title: 'Task', href: task.index(), icon: LayoutGrid }]
+        : []),
 
-    ...(hasPermission('manage presets')
+    ...(hasPermission('manage task presets')
         ? [{ title: 'Task Preset', href: taskPreset.index(), icon: LayoutGrid }]
         : []),
 

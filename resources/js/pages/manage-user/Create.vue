@@ -17,6 +17,7 @@ import { computed, ref } from 'vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'vue-sonner'
 import { BreadcrumbItem } from '@/types';
+import { MANAGE_USER_PERMISSIONS } from '@/lib/permissions';
 
 const props = defineProps<{
     departments: { data: Department[] }
@@ -39,15 +40,6 @@ const isSuperAdmin = computed(() => auth.value.user.role === 'superadmin')
 
 const open = ref(false)
 
-const PERMISSIONS = [
-    { value: 'manage dashboard', label: 'Manage Dashboard' },
-    { value: 'manage users', label: 'Manage Users' },
-    { value: 'manage departments', label: 'Manage Departments' },
-    { value: 'manage tasks', label: 'Manage Tasks' },
-    { value: 'manage task presets', label: 'Manage Task Presets' },
-    { value: 'manage transactions', label: 'Manage Transactions' },
-]
-
 const form = useForm({
     name: '',
     email: '',
@@ -67,14 +59,23 @@ const toggleDepartment = (id: string) => {
     }
 }
 
-const togglePermission = (value: string) => {
-    const index = form.permissions.indexOf(value)
-    if (index === -1) {
-        form.permissions.push(value)
-    } else {
-        form.permissions.splice(index, 1)
-    }
-}
+const isPermissionChecked = (permissionName: string) => {
+    return computed({
+        get: () => form.permissions.includes(permissionName),
+        set: (value: boolean) => {
+            if (value) {
+                if (!form.permissions.includes(permissionName)) {
+                    form.permissions.push(permissionName);
+                }
+            } else {
+                const index = form.permissions.indexOf(permissionName);
+                if (index > -1) {
+                    form.permissions.splice(index, 1);
+                }
+            }
+        },
+    });
+};
 
 const createUser = () => {
     form.post(user.store().url, {
@@ -191,7 +192,7 @@ const createUser = () => {
                     </CardHeader>
                     <CardContent class="space-y-3">
                         <div
-                            v-for="permission in PERMISSIONS"
+                            v-for="permission in MANAGE_USER_PERMISSIONS"
                             :key="permission.value"
                             class="flex items-center justify-between rounded-lg border p-3"
                         >
@@ -200,8 +201,7 @@ const createUser = () => {
                             </Label>
                             <Checkbox
                                 :id="permission.value"
-                                :checked="form.permissions.includes(permission.value)"
-                                @update:checked="togglePermission(permission.value)"
+                                v-model="isPermissionChecked(permission.value).value"
                             />
                         </div>
                         <InputError :message="form.errors.permissions" />

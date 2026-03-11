@@ -15,6 +15,7 @@ import { Department } from '@/types/department';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { Check, ChevronsUpDown } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { MANAGE_USER_PERMISSIONS } from '@/lib/permissions';
 
 const props = defineProps<{
     user: { data: User & { departments: Department[], permissions: { name: string }[] } }
@@ -37,13 +38,6 @@ const auth = computed(() => page.props.auth as { user: { role: string } })
 const isSuperAdmin = computed(() => auth.value.user.role === 'superadmin')
 
 const open = ref(false)
-
-const PERMISSIONS = [
-    { value: 'manage users', label: 'Manage Users' },
-    { value: 'manage departments', label: 'Manage Departments' },
-    { value: 'manage tasks', label: 'Manage Tasks' },
-    { value: 'manage transactions', label: 'Manage Transactions' },
-]
 
 const form = useForm({
     name: props.user.data.name,
@@ -192,7 +186,7 @@ const isPermissionChecked = (permissionName: string) => {
                         <CardDescription>Assign permissions to this user</CardDescription>
                     </CardHeader>
                     <CardContent class="space-y-3">
-                        <div v-for="permission in PERMISSIONS" :key="permission.value"
+                        <div v-for="permission in MANAGE_USER_PERMISSIONS" :key="permission.value"
                             class="flex items-center justify-between rounded-lg border p-3">
                             <Label :for="permission.value" class="cursor-pointer font-normal">
                                 {{ permission.label }}
