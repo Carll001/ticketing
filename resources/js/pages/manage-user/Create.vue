@@ -222,7 +222,5 @@ const createUser = () => {
                 </Card>
             </section>
         </form>
-
-        <pre>{{ form }}</pre>
     </AppLayout>
 </template>
