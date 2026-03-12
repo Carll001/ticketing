@@ -67,6 +67,7 @@ const userToDelete = ref<User | null>(null)
 
 const createUser = () => router.visit(user.create())
 const editUser = (id: string) => router.visit(user.edit(id))
+const showUser = (id: string) => router.visit(user.show(id))
 
 const confirmDelete = (u: User) => {
     userToDelete.value = u
@@ -196,7 +197,7 @@ const table = useVueTable({
                 <DropdownMenuItem @click="editUser(user.id)">
                     Edit User
                 </DropdownMenuItem>
-                <DropdownMenuItem>View User</DropdownMenuItem>
+                <DropdownMenuItem @click="showUser(user.id)">View User</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                     class="text-destructive focus:text-destructive"
