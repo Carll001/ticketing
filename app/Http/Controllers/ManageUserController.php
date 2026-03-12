@@ -56,6 +56,13 @@ class ManageUserController extends Controller
         ]);
     }
 
+    public function show(User $user)
+    {
+        return Inertia::render('manage-user/Show', [
+            'user' => UserResource::make($user->load('departments', 'permissions')),
+        ]);
+    }
+
     public function update(UserRequest $request, User $user)
     {
         $this->service->update($user, $request->validated());
