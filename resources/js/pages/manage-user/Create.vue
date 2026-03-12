@@ -67,14 +67,23 @@ const toggleDepartment = (id: string) => {
     }
 }
 
-const togglePermission = (value: string) => {
-    const index = form.permissions.indexOf(value)
-    if (index === -1) {
-        form.permissions.push(value)
-    } else {
-        form.permissions.splice(index, 1)
-    }
-}
+const isPermissionChecked = (permissionName: string) => {
+    return computed({
+        get: () => form.permissions.includes(permissionName),
+        set: (value: boolean) => {
+            if (value) {
+                if (!form.permissions.includes(permissionName)) {
+                    form.permissions.push(permissionName);
+                }
+            } else {
+                const index = form.permissions.indexOf(permissionName);
+                if (index > -1) {
+                    form.permissions.splice(index, 1);
+                }
+            }
+        }
+    });
+};
 
 const createUser = () => {
     form.post(user.store().url, {
@@ -198,10 +207,14 @@ const createUser = () => {
                             <Label :for="permission.value" class="cursor-pointer font-normal">
                                 {{ permission.label }}
                             </Label>
-                            <Checkbox
+                            <!-- <Checkbox
                                 :id="permission.value"
                                 :checked="form.permissions.includes(permission.value)"
                                 @update:checked="togglePermission(permission.value)"
+                            /> -->
+                            <Checkbox
+                                :id="permission.value"
+                                v-model="isPermissionChecked(permission.value).value"
                             />
                         </div>
                         <InputError :message="form.errors.permissions" />
@@ -209,5 +222,7 @@ const createUser = () => {
                 </Card>
             </section>
         </form>
+
+        <pre>{{ form }}</pre>
     </AppLayout>
 </template>
