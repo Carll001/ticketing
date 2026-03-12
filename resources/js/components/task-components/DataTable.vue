@@ -41,6 +41,7 @@ import { User } from '@/types'
 import { router } from '@inertiajs/vue3'
 import { Task } from '@/types/task'
 import task from '@/routes/task'
+import PermissionGuard from '@/components/PermissionGuard.vue'
 
 const props = defineProps<{
     tasks: Task[]
@@ -190,34 +191,45 @@ const table = useVueTable({
 
 <template>
     <DefineTemplate v-slot="{ task }">
-        <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-                <Button variant="ghost" class="h-8 w-8 p-0">
-                    <span class="sr-only">Open menu</span>
-                    <MoreHorizontal class="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
+    <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+            <Button variant="ghost" class="h-8 w-8 p-0">
+                <span class="sr-only">Open menu</span>
+                <MoreHorizontal class="h-4 w-4" />
+            </Button>
+        </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
+            <PermissionGuard permission="manage tasks">
                 <DropdownMenuItem @click="editTask(task.id)">
                     Edit Task
                 </DropdownMenuItem>
+            </PermissionGuard>
 
+            
                 <DropdownMenuItem @click="showTask(task.id)">
                     View Task
                 </DropdownMenuItem>
+            
 
-                <DropdownMenuSeparator />
+            <DropdownMenuSeparator />
 
+            <PermissionGuard permission="manage tasks">
                 <DropdownMenuItem @click="removeTask(task.id)">
                     Remove Task
                 </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-        <Button size="sm" @click="showTask(task.id)">View Task</Button>
-    </DefineTemplate>
+            </PermissionGuard>
+        </DropdownMenuContent>
+    </DropdownMenu>
+
+    
+        <Button size="sm" @click="showTask(task.id)">
+            View Task
+        </Button>
+    
+</DefineTemplate>
     <div class="w-full">
         <div class="flex items-center py-4">
             <Input class="max-w-sm" placeholder="Filter tasks..."
