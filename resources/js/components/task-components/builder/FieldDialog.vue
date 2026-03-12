@@ -65,7 +65,7 @@ watch(open, (v) => {
 
 const parsedBulk = computed(() => {
   const valid = bulkRows.value
-    .map((row) => {
+    .map((row): FieldInput | null => {
       const label = row.label.trim()
       if (!label) return null
       return {
@@ -73,7 +73,7 @@ const parsedBulk = computed(() => {
         label,
         required: false,
         placeholder: row.type === 'checkbox' ? undefined : (row.placeholder.trim() || undefined),
-      } satisfies FieldInput
+      }
     })
     .filter((item): item is FieldInput => item !== null)
 
@@ -206,7 +206,7 @@ const addBulk = () => {
             <Button type="button" variant="outline" @click="addBulkRow">Add Row</Button>
           </div>
 
-          <div class="space-y-2">
+          <div class="space-y-2 max-h-[45vh] overflow-y-auto min-h-0 pr-2">
             <div class="grid grid-cols-[1.4fr_1fr_1.4fr_auto] gap-2 px-1 text-xs font-medium text-muted-foreground">
               <span>Label</span>
               <span>Type</span>
