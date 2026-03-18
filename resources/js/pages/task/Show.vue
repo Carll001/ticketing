@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onBeforeUnmount, reactive } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -71,7 +72,8 @@ type UiStep = {
   proofFiles: File[]
   existingProofFileUrl: string | null
   existingProofFileName: string | null
-  existingProofFiles: Array<{ name: string; url: string | null }>
+  existingProofFileMime: string | null
+  existingProofFiles: Array<{ name: string; url: string | null; mime: string | null }>
   comments: Array<{ id: string; message: string; userName: string }>
   newComment: string
 }
@@ -101,10 +103,12 @@ const uiSteps = reactive<UiStep[]>(
     proofFiles: [],
     existingProofFileUrl: step.proof_file_url ?? null,
     existingProofFileName: step.proof_file_name ?? null,
+    existingProofFileMime: step.proof_file_mime ?? null,
     existingProofFiles: (step.proof_files ?? [])
       .map((file) => ({
         name: file.name || 'Attachment',
         url: file.url || null,
+        mime: file.mime || null,
       })),
     comments: (step.comments ?? []).map((comment) => ({
       id: comment.id,
@@ -117,6 +121,12 @@ const uiSteps = reactive<UiStep[]>(
 
 const claimingState = reactive<Record<string, boolean>>({})
 const submittingState = reactive<Record<string, boolean>>({})
+const proofPreview = reactive({
+  open: false,
+  src: null as string | null,
+  name: '',
+  revokeOnClose: false,
+})
 
 const isClaimedByCurrentUser = (step: UiStep) =>
   !!authUserId.value && step.claimedByUserId === authUserId.value
@@ -131,6 +141,73 @@ const canTakeStep = (step: UiStep) =>
 
 const canCommentStep = (step: UiStep) =>
   step.allowComments && (isClaimedByCurrentUser(step) || isTaskCreator.value)
+
+const isImageMime = (mime?: string | null) =>
+  Boolean(mime && mime.toLowerCase().startsWith('image/'))
+
+const clearProofPreview = () => {
+  if (proofPreview.revokeOnClose && proofPreview.src) {
+    URL.revokeObjectURL(proofPreview.src)
+  }
+
+  proofPreview.open = false
+  proofPreview.src = null
+  proofPreview.name = ''
+  proofPreview.revokeOnClose = false
+}
+
+const openProofPreview = (name: string, src: string, revokeOnClose = false) => {
+  clearProofPreview()
+  proofPreview.open = true
+  proofPreview.src = src
+  proofPreview.name = name
+  proofPreview.revokeOnClose = revokeOnClose
+}
+
+const openExistingProofPreview = (name: string, url: string | null) => {
+  if (!url) return
+  openProofPreview(name, url, false)
+}
+
+const openSelectedProofPreview = (file: File) => {
+  openProofPreview(file.name, URL.createObjectURL(file), true)
+}
+
+const getExistingProofItems = (step: UiStep): Array<{ name: string; url: string | null; mime: string | null }> => {
+  const items = [
+    ...(step.existingProofFileUrl
+      ? [{
+          name: step.existingProofFileName || 'Current proof',
+          url: step.existingProofFileUrl,
+          mime: step.existingProofFileMime,
+        }]
+      : []),
+    ...step.existingProofFiles,
+  ]
+
+  return items.filter((item, index, array) =>
+    array.findIndex((entry) => entry.name === item.name && entry.url === item.url) === index,
+  )
+}
+
+const setProofType = (step: UiStep, type: 'text' | 'image' | 'file') => {
+  step.proofType = type
+
+  if (type === 'text') {
+    step.proofFiles = []
+  }
+
+  clearProofPreview()
+}
+
+const handleProofFileChange = (step: UiStep, event: Event) => {
+  step.proofFiles = Array.from((event.target as HTMLInputElement).files ?? [])
+  clearProofPreview()
+}
+
+onBeforeUnmount(() => {
+  clearProofPreview()
+})
 
 const takeStep = (step: UiStep) => {
   if (!authUserId.value) return
@@ -314,7 +391,7 @@ const submitStepComment = (step: UiStep) => {
                         size="sm"
                         :variant="step.proofType === 'text' ? 'default' : 'outline'"
                         :disabled="!isClaimedByCurrentUser(step)"
-                        @click="step.proofType = 'text'"
+                        @click="setProofType(step, 'text')"
                       >
                         Text
                       </Button>
@@ -323,7 +400,7 @@ const submitStepComment = (step: UiStep) => {
                         size="sm"
                         :variant="step.proofType === 'image' ? 'default' : 'outline'"
                         :disabled="!isClaimedByCurrentUser(step)"
-                        @click="step.proofType = 'image'"
+                        @click="setProofType(step, 'image')"
                       >
                         Image
                       </Button>
@@ -332,7 +409,7 @@ const submitStepComment = (step: UiStep) => {
                         size="sm"
                         :variant="step.proofType === 'file' ? 'default' : 'outline'"
                         :disabled="!isClaimedByCurrentUser(step)"
-                        @click="step.proofType = 'file'"
+                        @click="setProofType(step, 'file')"
                       >
                         File
                       </Button>
@@ -352,33 +429,57 @@ const submitStepComment = (step: UiStep) => {
                         :accept="step.proofType === 'image' ? 'image/*' : '*/*'"
                         multiple
                         :disabled="!isClaimedByCurrentUser(step)"
-                        @change="step.proofFiles = Array.from(($event.target as HTMLInputElement).files ?? [])"
+                        @change="handleProofFileChange(step, $event)"
                       />
                       <p v-if="step.proofFiles.length > 0" class="text-xs text-muted-foreground">
                         Selected {{ step.proofFiles.length }} file(s) ready to upload.
                       </p>
-                      <p v-else-if="step.existingProofFileName" class="text-xs text-muted-foreground">
-                        Current: {{ step.existingProofFileName }}
+                      <p v-else-if="getExistingProofItems(step).length > 0" class="text-xs text-muted-foreground">
+                        Current proof file(s):
                       </p>
-                      <div class="space-y-1">
-                        <a
-                          v-if="step.existingProofFileUrl"
-                          class="block text-xs underline"
-                          :href="step.existingProofFileUrl"
-                          target="_blank"
+                      <div v-if="step.proofFiles.length > 0" class="space-y-2">
+                        <div
+                          v-for="(file, fileIdx) in step.proofFiles"
+                          :key="`${step.id}-selected-${fileIdx}`"
+                          class="flex flex-wrap items-center gap-2 text-xs"
                         >
-                          View Current Proof
-                        </a>
-                        <template v-for="(file, fileIdx) in step.existingProofFiles" :key="`${step.id}-${fileIdx}`">
+                          <span class="font-medium">{{ file.name }}</span>
+                          <Button
+                            v-if="isImageMime(file.type)"
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            @click="openSelectedProofPreview(file)"
+                          >
+                            Preview
+                          </Button>
+                        </div>
+                      </div>
+                      <div v-else class="space-y-2">
+                        <div
+                          v-for="(file, fileIdx) in getExistingProofItems(step)"
+                          :key="`${step.id}-${fileIdx}`"
+                          class="flex flex-wrap items-center gap-2 text-xs"
+                        >
+                          <span class="font-medium">{{ file.name }}</span>
+                          <Button
+                            v-if="file.url && isImageMime(file.mime)"
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            @click="openExistingProofPreview(file.name, file.url)"
+                          >
+                            Preview
+                          </Button>
                           <a
                             v-if="file.url"
-                            class="block text-xs underline"
+                            class="underline"
                             :href="file.url"
                             target="_blank"
                           >
-                            {{ file.name }}
+                            Open
                           </a>
-                        </template>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -437,5 +538,21 @@ const submitStepComment = (step: UiStep) => {
         </CardContent>
       </Card>
     </div>
+
+    <Dialog :open="proofPreview.open" @update:open="(value) => !value && clearProofPreview()">
+      <DialogContent class="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{{ proofPreview.name || 'Proof Preview' }}</DialogTitle>
+        </DialogHeader>
+        <div class="overflow-hidden rounded-md border bg-muted/20">
+          <img
+            v-if="proofPreview.src"
+            :src="proofPreview.src"
+            :alt="proofPreview.name || 'Proof preview'"
+            class="max-h-[70vh] w-full object-contain"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   </AppLayout>
 </template>

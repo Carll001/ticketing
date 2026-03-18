@@ -43,7 +43,7 @@ class ManageUserController extends Controller
 
     public function store(UserRequest $request)
     {
-        $this->service->store($request->validated());
+        $this->service->store($request->validated(), $request->user());
 
         return redirect()->route('user.index');
     }

@@ -13,6 +13,7 @@ use App\Models\TaskStep;
 use App\Models\TaskStepComment;
 use App\Models\TaskStepField;
 use App\Models\User;
+use App\Services\TaskNotificationService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,8 +25,10 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
-    public function __construct(private readonly TransactionService $transactionService)
-    {
+    public function __construct(
+        private readonly TransactionService $transactionService,
+        private readonly TaskNotificationService $taskNotificationService,
+    ) {
     }
 
     /**
@@ -97,6 +100,8 @@ class TaskController extends Controller
                 'actor' => $request->user(),
                 'summary' => "Task created: {$task->title}",
             ]);
+
+            $this->taskNotificationService->notifyTaskCreated($task);
         }
 
         return redirect()->route('task.index');
@@ -217,6 +222,8 @@ class TaskController extends Controller
                     'status' => 'in_progress',
                 ],
             ]);
+
+            $this->taskNotificationService->notifyStepClaimed($task, $taskStep, request()->user());
         }
 
         return back();
@@ -357,6 +364,8 @@ class TaskController extends Controller
             ],
         ]);
 
+        $this->taskNotificationService->notifyStepCompleted($task, $taskStep, $request->user());
+
         return back();
     }
 
@@ -399,6 +408,8 @@ class TaskController extends Controller
                 'comment_preview' => Str::limit($validated['message'], 120),
             ],
         ]);
+
+        $this->taskNotificationService->notifyStepCommented($task, $taskStep, $request->user(), $validated['message']);
 
         return back();
     }

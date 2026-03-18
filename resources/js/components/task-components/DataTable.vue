@@ -155,7 +155,7 @@ const columns: ColumnDef<Task>[] = [
         cell: ({ row }) => {
             const currentTask = row.original
 
-            return h('div', { class: 'flex justify-end' }, [
+            return h('div', { class: 'flex gap-4' }, [
                 h(ReuseTemplate, {
                     task: currentTask,
                 }),
@@ -191,32 +191,29 @@ const table = useVueTable({
 
 <template>
     <DefineTemplate v-slot="{ task }">
-        <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-                <Button variant="ghost" class="h-8 w-8 p-0">
-                    <span class="sr-only">Open menu</span>
-                    <MoreHorizontal class="h-4 w-4" />
-                </Button>
-            </DropdownMenuTrigger>
+        <PermissionGuard permission="manage tasks">
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" class="h-8 w-8 p-0">
+                        <span class="sr-only">Open menu</span>
+                        <MoreHorizontal class="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
-                <DropdownMenuItem @click="editTask(task.id)">
-                    Edit Task
-                </DropdownMenuItem>
+                    <DropdownMenuItem @click="editTask(task.id)">
+                        Edit Task
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
 
-                <DropdownMenuItem @click="showTask(task.id)">
-                    View Task
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem @click="removeTask(task.id)">
-                    Remove Task
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                    <DropdownMenuItem @click="removeTask(task.id)">
+                        Remove Task
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </PermissionGuard>
         <Button size="sm" @click="showTask(task.id)">View Task</Button>
     </DefineTemplate>
     <div class="w-full">

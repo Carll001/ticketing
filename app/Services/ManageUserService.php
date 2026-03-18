@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Notifications\UserAddedNotification;
 use Illuminate\Support\Facades\Hash;
 
 class ManageUserService
 {
-    public function store(array $data): User
+    public function store(array $data, ?User $actor = null): User
     {
         $data['password'] = Hash::make($data['password']);
         $data['role'] = $data['role'] ?? 'staff';
@@ -19,6 +20,7 @@ class ManageUserService
         $user = User::create($data);
         $user->departments()->sync($departmentIds);
         $user->syncPermissions($permissions);
+        $user->notify(new UserAddedNotification($actor));
 
         return $user;
     }
