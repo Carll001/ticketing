@@ -41,6 +41,7 @@ import { User } from '@/types'
 import { router } from '@inertiajs/vue3'
 import { Task } from '@/types/task'
 import task from '@/routes/task'
+import PermissionGuard from '../PermissionGuard.vue'
 
 const props = defineProps<{
     tasks: Task[]
@@ -224,7 +225,9 @@ const table = useVueTable({
                 :model-value="table.getColumn('title')?.getFilterValue() as string"
                 @update:model-value="table.getColumn('title')?.setFilterValue($event)" />
 
-            <Button @click="createTask" class="ml-auto">Create</Button>
+            <PermissionGuard permission="manage tasks">
+                <Button @click="createTask" class="ml-auto">Create</Button>
+            </PermissionGuard>
         </div>
         <div class="rounded-md border">
             <Table>
