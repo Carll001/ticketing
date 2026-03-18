@@ -9,9 +9,17 @@ use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
-Route::inertia('/', 'Welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return auth()->user()->can('manage dashboard') 
+            ? redirect()->route('dashboard') 
+            : redirect()->route('task.index');
+    }
+    
+    return inertia('Welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+    ]);
+})->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->middleware('permission:manage dashboard')->name('dashboard');
